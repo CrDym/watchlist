@@ -10,6 +10,7 @@ import click
 
 from flask import Flask, render_template
 from flask_sqlalchemy import SQLAlchemy
+from flask import request, url_for, redirect, flash
 
 WIN = sys.platform.startswith('win')
 if WIN:
@@ -18,6 +19,7 @@ else:
     prefix = 'sqlite:////'
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = 'dev'
 app.config['SQLALCHEMY_DATABASE_URI'] = prefix + os.path.join(app.root_path, 'data.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # 关闭对模型修改的监控
 # 在扩展实例化前加载配置
@@ -90,12 +92,52 @@ def page_not_found(e):
     return render_template('500.html'), 500
 
 
-@app.route('/')
+@app.route('/', methods=['POST', 'GET'])
 def index():
-    user = User.query.first()  # 读取用户记录
+    if request.method == 'POST':
+        title = request.form.get('title')
+        year = request.form.get('year')
+        # 验证数据
+        if not title or not year or len(year) != 4 or len(title) > 60:
+            flash('Invalid input.')  # 显示错误提示
+            return redirect(url_for('index'))
+        movie = Movie(title=title, year=year)
+        db.session.add(movie)
+        db.session.commit()
+        flash('Item created.')
+        return redirect(url_for('index'))
+
     movies = Movie.query.all()  # 读取所有电影记录
     return render_template('index.html', movies=movies)
 
 
+@app.route('/movie/edit/<int:movie_id>', methods=['GET', 'POST'])
+def edit(movie_id):
+    movie = Movie.query.get_or_404(movie_id)
+
+    if request.method == 'POST':
+        title = request.form['title']
+        year = request.form['year']
+
+        if not title or not year or len(year) > 4 or len(title) > 60:
+            flash('Invalid input.')
+            return redirect(url_for('edit', movie_id=movie_id))
+
+        movie.title = title
+        movie.year = year
+        db.session.commit()
+        flash('Item updated.')
+        return redirect(url_for('index'))
+
+    return render_template('edit.html', movie=movie)
+
+
+@app.route('/movie/delete/<int:movie_id>', methods=['POST'])  # 限定只接受 POST 请求
+def delete(movie_id):
+    movie = Movie.query.get_or_404(movie_id)  # 获取电影记录
+    db.session.delete(movie)  # 删除对应的记录
+    db.session.commit()  # 提交数据库会话
+    flash('Item deleted.')
+    return redirect(url_for('index'))  # 重定向回主页
 
 
