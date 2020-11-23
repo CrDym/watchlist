@@ -27,7 +27,8 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # 关闭对模型修改的
 # 在扩展实例化前加载配置
 db = SQLAlchemy(app)
 
-login_manager =LoginManager(app)
+login_manager = LoginManager(app)
+
 
 @login_manager.user_loader
 def user_loader(user_id):
@@ -36,6 +37,7 @@ def user_loader(user_id):
 
 
 login_manager.login_view = 'Login'
+
 
 @app.cli.command()  # 注册为命令
 @click.option('--drop', is_flag=True, help='Create after drop.')  # 设置选项
@@ -71,17 +73,17 @@ def forge():
     click.echo('Done.')
 
 
-class User(db.Model,UserMixin):  # 表名将会是user 自动生成 小写
+class User(db.Model, UserMixin):  # 表名将会是user 自动生成 小写
     id = db.Column(db.Integer, primary_key=True)  # 主键
     name = db.Column(db.String(20))  # 名字
     username = db.Column(db.String(20))  # 用户名
-    password_hash = db.Column(db.String(128)) # 密码
+    password_hash = db.Column(db.String(128))  # 密码
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
-    def validate_password(self,password):
-        return check_password_hash(self.password_hash,password)
+    def validate_password(self, password):
+        return check_password_hash(self.password_hash, password)
 
 
 class Movie(db.Model):
@@ -93,7 +95,7 @@ class Movie(db.Model):
 @app.context_processor
 def inject_user():
     user = User.query.first()
-    return dict(user=user)   # 需要返回字典，等同于 return {'user':user}
+    return dict(user=user)  # 需要返回字典，等同于 return {'user':user}
 
 
 @app.errorhandler(400)
@@ -163,6 +165,7 @@ def delete(movie_id):
     flash('Item deleted.')
     return redirect(url_for('index'))  # 重定向回主页
 
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -184,6 +187,7 @@ def login():
         return redirect(url_for('login'))  # 重定向回登录页面
 
     return render_template('login.html')
+
 
 @app.route('/logout')
 @login_required  # 用于视图保护，后面会详细介绍
@@ -216,8 +220,8 @@ def settings():
 
 
 @app.cli.command()
-@click.option('--username',prompt=True, help='The Username used to login.')
-@click.option('--password',prompt = True, hide_input=True,confirmation_prompt=True,help='The Password used to login.')
+@click.option('--username', prompt=True, help='The Username used to login.')
+@click.option('--password', prompt=True, hide_input=True, confirmation_prompt=True, help='The Password used to login.')
 def admin(username, password):
     '''Create user.'''
     db.create_all()
